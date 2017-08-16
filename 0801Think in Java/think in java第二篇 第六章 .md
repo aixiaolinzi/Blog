@@ -433,3 +433,192 @@ public class Music4 {
 它允许创建者规定一个类的基本形式：方法名、自变量列表以及返回类型，但不规定方法主体。
 为创建一个接口，请使用interface 关键字，而不要用 class。与类相似，我们可在 interface关键字的前面增加一个 public关键字（但只有接口定义于同名的一个文件内）；或者将其省略，营造一种“友好的”状态。
 ####java的“多重继承”
+x 从属于 a，也从属于 b，也从属于 c
+interface后面多个接口，用逗号隔开。
+```groovy
+package polymorphism7;
+
+interface CanFight {
+    void fight();
+}
+
+interface CanSwim {
+    void swim();
+}
+
+interface CanFly {
+    void fly();
+}
+
+class ActionCharacter {
+    public void fight() {
+        System.out.println("flightTTTTTTTTTTTTTTTT");
+    }
+}
+
+/**
+ * 情况是：：
+ * 类里面也有fight()方法。
+ * 接口CanFight里面也有fight()方法。
+ * hero下面的实现就没有了 fight()方法
+ */
+class Hero extends ActionCharacter
+        implements CanFight, CanSwim, CanFly {
+
+    @Override
+    public void swim() {
+
+    }
+
+    @Override
+    public void fly() {
+        System.out.println("FLYYYYY");
+    }
+}
+
+public class Adventure {
+    /****************相应的接口和基础类***************************/
+    static void t(CanFight x) { x.fight(); }
+    static void u(CanSwim x) { x.swim(); }
+    static void v(CanFly x) { x.fly(); }
+    static void w(ActionCharacter x) { x.fight(); }
+    /************************完成***********************************/
+
+    public static void main(String []args){
+        Hero h=new Hero();
+        t(h);
+        u(h);
+        v(h);
+        w(h);
+    }
+}
+```
+Hero 将具体类ActionCharacter 同接口 CanFight，CanSwim 以及CanFly合并起来。按这种形式合并一个具体类与接口的时候，具体类必须首先出现，然后才是接口（否则编译器会报错）。
+####初始化接口中的字段
+```groovy
+public interface RandVals {
+	int rint = (int)(Math.random() * 10);
+	long rlong = (long)(Math.random() * 10);
+	float rfloat = (float)(Math.random() * 10);
+	double rdouble = Math.random() * 10;
+}
+```
+由于字段是 static的，所以它们会在首次装载类之后、以及首次访问任何字段之前获得初始化。
+当然，字段并不是接口的一部分，而是保存于那个接口的 static存储区域中。
+###内部类
+####内部类和上溯造型
+```groovy
+package polymorphism7;
+
+
+/**
+ * Contents 和Destination 代表可由客户程序员使用的接口
+ * （记住接口会将自己的所有成员都变成public属性）。
+ */
+
+/**
+ * 抽象类
+ */
+abstract class Contents {
+    abstract public int value();
+}
+
+/**
+ * 接口
+ */
+interface Destination {
+    String readLabel();
+}
+
+public class Parcel3 {
+    private class PContents extends Contents {
+        private int i = 11;
+
+        @Override
+        public int value() {
+            return i;
+        }
+    }
+
+    protected class PDestination implements Destination {
+        private String label;
+
+        private PDestination(String whereTo) {
+            label = whereTo;
+        }
+
+        @Override
+        public String readLabel() {
+            return label;
+        }
+    }
+
+    /****************下面的两个方法，做到了类上溯的问题******************/
+    public Destination dest(String s) {
+        return new PDestination(s);
+    }
+
+    public Contents cont() {
+        return new PContents();
+    }
+}
+
+class Test {
+    public static void main(String[] args) {
+        Parcel3 p = new Parcel3();
+        Contents c = p.cont();
+        Destination d = p.dest("Tanzania");
+    }
+
+}
+
+```
+>  Parcel3 p = new Parcel3();
+        Contents c = p.cont();
+        Destination d = p.dest("Tanzania");
+        这个地方已经完成了上溯了。
+        内部类
+
+####方法和作用域中的内部类
+在下面这个例子里，将修改前面的代码，以便使用：
+(1) 在一个方法内定义的类
+(2) 在方法的一个作用域内定义的类
+(3) 一个匿名类，用于实现一个接口
+(4) 一个匿名类，用于扩展拥有非默认构建器的一个类
+(5) 一个匿名类，用于执行字段初始化
+(6) 一个匿名类，通过实例初始化进行构建（匿名内部类不可拥有构建器）
+
+```groovy
+package polymorphism7;
+
+public class Parcel4 {
+    /**
+     *(1) 在一个方法内定义的类
+     * 上来就是返回一个接口
+     * 利用内部类，得到上溯的接口
+     * @param s
+     * @return
+     */
+    public Destination dest(String s) {
+        class PDestination implements Destination {
+
+            private String label;
+
+            private PDestination(String whereTo) {
+                label = whereTo;
+            }
+
+            @Override
+            public String readLabel() {
+                return label;
+            }
+        }
+        return new PDestination(s);
+    }
+    public static void main(String[] args) {
+        Parcel4 p = new Parcel4();
+        Destination d = p.dest("Tanzania");
+    }
+}
+```
+PDestination类属于 dest()的一部分，而不是 Parcel4的一部分（同时注意可为相同目录内每个类内部的一个内部类使用类标识符 PDestination，这样做不会发生命名的冲突）。

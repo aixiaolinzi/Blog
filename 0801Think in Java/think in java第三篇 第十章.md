@@ -345,8 +345,395 @@ GZIPInputStream		|	 一个DeflaterInputStream，解压用GZIP 文件格式保存
 尽管存在许多种压缩算法，但是Zip和 GZIP 可能最常用的。
 ####用 GZIP 进行简单压缩
 GZIP 接口非常简单，所以如果只有单个数据流需要压缩（而不是一系列不同的数据），那么它就可能是最适当选择。
+####用 Zip 进行多文件保存
+下面的代码就可以处理所有问题。
+```groovy
+
+     String[] arg = new String[]{"E:\\testjava\\testjava\\d.txt", "E:\\testjava\\c.txt", "E:\\testjava\\d.txt"};
+        String[] arg1 = new String[]{"testjava\\testjava\\d.txt", "testjava\\c.txt", "testjava\\d.txt"};
 
 
+        try {
+            FileOutputStream f = new FileOutputStream("test.zip");
+
+            CheckedOutputStream csum = new CheckedOutputStream(f, new Adler32());
+            ZipOutputStream out =
+                    new ZipOutputStream(
+                            new BufferedOutputStream(csum));
+            out.setComment("A test of Java Zipping");
+
+            for (int i = 0; i < arg.length; i++) {
+                System.out.println("Writing file " + arg1[i]);
+
+                //读取要压缩的值。
+                BufferedReader in =
+                        new BufferedReader(
+                                new FileReader(arg[i]));
+                //往特定的目录里面写。
+                out.putNextEntry(new ZipEntry(arg1[i]));
+
+                int c;
+                while ((c = in.read()) != -1) {
+                    out.write(c);
+                }
+                in.close();
+            }
+            out.close();
+            System.out.println("Checksum: " + csum.getChecksum().getValue());
+            /****************************上面已经完成写的操作********************************************/
 
 
+            /************************************下面开始读的操作****************************************************/
+            System.out.println("Reading file");
+            FileInputStream fi = new FileInputStream("test.zip");//要读的文件
+            CheckedInputStream csumi = new CheckedInputStream(fi, new Adler32());
+            //而且尽管 CheckedInputStream 和CheckedOutputStream 同时提供了对Adler32和CRC32校验和的支持，
+            //但是ZipEntry 只支持 CRC的接口。这虽然属于基层 Zip格式的限制，但却限制了我们使用速度更的Adler32。
+            ZipInputStream in2 =
+                    new ZipInputStream(
+                            new BufferedInputStream(csumi));
+            ZipEntry ze;
+            System.out.println("Checksum: " + csumi.getChecksum().getValue());
+            while ((ze = in2.getNextEntry()) != null) {
+                System.out.println("**********Reading file " + ze);
+                int x;
+                while ((x = in2.read()) != -1)
+                    System.out.write(x);//也是在控制台上面打印出来。
+            }
+            in2.close();
 
+            /***************************下面是读取所有的文件*********************************/
+            // Alternative way to open and read
+            // zip files:下面是相应的文件读取出来。
+            ZipFile zf = new ZipFile("test.zip");
+            Enumeration e = zf.entries();
+            while (e.hasMoreElements()) {
+                ZipEntry ze2 = (ZipEntry) e.nextElement();
+                System.out.println("File: " + ze2);
+            }
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+```
+对于要加入压缩档的每一个文件，都必须调用 putNextEntry()，并将其传递给一个 ZipEntry 对象。
+ZipEntry 对象包含了一个功能全面的接口，利用它可以获取和设置 Zip文件内那个特定的 Entry（入口）上能够接受的所有数据：名字、压缩后和压缩前的长度、日期、CRC校验和、额外字段的数据、注释、压缩方法以及它是否一个目录入口等等。然而，虽然 Zip格式提供了设置密码的方法，但Java 的 Zip库没有提供这方面的支持。而且尽管 CheckedInputStream 和CheckedOutputStream 同时提供了对Adler32和CRC32校验和的支持，但是ZipEntry 只支持 CRC的接口。这虽然属于基层 Zip格式的限制，但却限制了我们使用速度更快的Adler32。
+为解压文件，ZipInputStream 提供了一个 getNextEntry()方法，能在有的前提下返回下一个ZipEntry。作为一个更简洁的方法，可以用ZipFile 对象读取文件。该对象有一个entries()方法，可以为 ZipEntry 返回一个Enumeration（枚举）。
+为读取校验和，必须多少拥有对关联的Checksum 对象的访问权限。在这里保留了指向CheckedOutputStream和CheckedInputStream 对象的一个句柄。但是，也可以只占有指向Checksum 对象的一个句柄。
+Zip流中一个令人困惑的方法是setComment()。正如前面展示的那样，我们可在写一个文件时设置注释内容，但却没有办法取出 ZipInputStream内的注释。看起来，似乎只能通过 ZipEntry 逐个入口地提供对注释的完全支持。
+当然，使用 GZIP 或Zip库时并不仅仅限于文件——可以压缩任何东西，包括要通过网络连接发送的数据。
+####Java 归档（jar ）实用程序
+jar实用程序已与Sun 的JDK配套提供，可以按我们的选择自动压缩文件。请在命令行调用它：
+`jar [选项] 说明 [详情单] 输入文件`
+其中，“选项”用一系列字母表示（不必输入连字号或其他任何指示符）。如下所示：
+>c 创建新的或空的压缩档
+t 列出目录表
+x 解压所有文件
+x file 解压指定文件
+f 指出“我准备向你提供文件名”。若省略此参数，jar 会假定它的输入来自标准输入；或者在它创建文件
+时，输出会进入标准输出内
+m 指出第一个参数将是用户自建的详情表文件的名字
+v 产生详细输出，对 jar做的工作进行巨细无遗的描述
+O 只保存文件；不压缩文件（用于创建一个 JAR文件，以便我们将其置入自己的类路径中）
+M 不自动生成详情表文件
+
+下面是调用 jar的一些典型方法：
+>jar cf myJarFile.jar *.class
+
+用于创建一个名为myJarFile.jar 的 JAR文件，其中包含了当前目录中的所有类文件，同时还有自动产生的
+详情表文件。
+>jar cmf myJarFile.jar myManifestFile.mf *.class
+
+与前例类似，但添加了一个名为myManifestFile.mf的用户自建详情表文件。
+>jar tf myJarFile.jar
+
+生成myJarFile.jar 内所有文件的一个目录表。
+>jar tvf myJarFile.jar
+
+添加“verbose”（详尽）标志，提供与myJarFile.jar 中的文件有关的、更详细的资料。
+>jar cvf myApp.jar audio classes image
+
+假定audio，classes 和image 是子目录，这样便将所有子目录合并到文件myApp.jar 中。其中也包括了“verbose”标志，可在jar 程序工作时反馈更详尽的信息。
+
+如果用O 选项创建了一个JAR文件，那个文件就可置入自己的类路径（CLASSPATH）中：
+CLASSPATH="lib1.jar;lib2.jar;"
+Java 能在lib1.jar 和 lib2.jar 中搜索目标类文件。
+
+jar工具的功能没有zip工具那么丰富。例如，不能够添加或更新一个现成 JAR 文件中的文件，只能从头开始新建一个 JAR文件。此外，不能将文件移入一个 JAR文件，并在移动后将它们删除。然而，在一种平台上创建的JAR 文件可在其他任何平台上由jar工具毫无阻碍地读出（这个问题有时会困扰zip工具）。
+正如大家在第13 章会看到的那样，我们也用JAR为Java Beans 打包。
+
+####对象序列化
+它面向那些实现了Serializable接口的对象，可将它们转换成一系列字节，并可在以后完全恢复回原来的样子。
+
+语言里增加了对象序列化的概念后，可提供对两种主要特性的支持。Java 1.1 的“远程方法调用”（RMI）使本来存在于其他机器的对象可以表现出好象就在本地机器上的行为。将消息发给远程对象时，需要通过对象序列化来传输参数和返回值。
+####寻找类
+####transient（临时）关键字
+下面的代码就全都明白了：：
+```groovy
+/**
+ * transient（临时）关键字,具体的实施
+ */
+public class Logon implements Serializable {
+    private Date date = new Date();
+    private String username;
+    private transient String password;
+
+    Logon(String name, String pwd) {
+        username = name;
+        password = pwd;
+    }
+
+    @Override
+    public String toString() {
+        String pwd = (password == null) ? "(n/a)" : password;
+        return "logon info: \n " +
+                "username: " + username +
+                "\n date: " + date.toString() +
+                "\n password: " + pwd;
+    }
+
+    /**
+     * 由于Externalizable 对象默认时不保存它的任何字段，
+     * 所以transient 关键字只能伴随Serializable使用。
+     *
+     * @param args
+     */
+    public static void main(String[] args) {
+        Logon a = new Logon("Hulk", "myLittlePony");
+        System.out.println("logon a=" + a);
+
+        try {
+            ObjectOutputStream out =
+                    new ObjectOutputStream(
+                            new FileOutputStream("Logon.out"));
+
+            out.writeObject(a);
+            out.close();
+            int seconds = 5;
+            long t = System.currentTimeMillis() + seconds * 1000;
+            while (System.currentTimeMillis() < t) ;
+            ObjectInputStream in =
+                    new ObjectInputStream(
+                            new FileInputStream("Logon.out"));
+            System.out.println("Recovering object at " + new Date());
+            a = (Logon) in.readObject();
+            System.out.println("logon a=" + a);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+```
+>可以看到，其中的date 和 username 字段保持原始状态（未设成transient），所以会自动序列化。然而，password 被设为 transient，所以不会自动保存到磁盘；
+
+####Externalizable的替代方法
+```groovy
+package io;
+
+import java.io.*;
+
+public class SerialCtl implements Serializable {
+    String a;
+    transient String b;
+
+    public SerialCtl(String aa, String bb) {
+        a = "Not Transient: " + aa;
+        b = "Transient: " + bb;
+    }
+
+    public String toString() {
+        return a + "\n" + b;
+    }
+
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        System.out.println("先运行1111111111111");
+        stream.defaultWriteObject();
+        stream.writeObject(b);
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
+        System.out.println("后运行22222222222222222");
+        stream.defaultReadObject();
+        b = (String) stream.readObject();
+    }
+
+    public static void main(String[] args) {
+        SerialCtl sc = new SerialCtl("Test1", "Test2");
+        System.out.println("Before:\n" + sc);
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        try {
+            ObjectOutputStream o =
+                    new ObjectOutputStream(buf);
+            o.writeObject(sc);
+            ObjectInputStream in =
+                    new ObjectInputStream(
+                            new ByteArrayInputStream(buf.toByteArray()));
+            SerialCtl ctl = (SerialCtl) in.readObject();
+            System.out.println("After:::::\n" + ctl);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+>上面的操作，就是为了处理transient的问题。
+> 
+>若准备通过默认机制写入对象的非 transient 部分，那么必须调用defaultWriteObject()，令其作为writeObject()中的第一个操作；并调用defaultReadObject()，令其作为 readObject()的第一个操作。这些都是不常见的调用方法。举个例子来说，当我们为一个ObjectOutputStream 调用defaultWriteObject()的时候，而且没有为其传递参数，就需要采取这种操作，使其知道对象的句柄以及如何写入所有非transient的部分。这种做法非常不便。
+
+##第 11 章 运行期类型鉴定
+运行期类型鉴定（RTTI）的概念初看非常简单——手上只有基础类型的一个句柄时，利用它判断一个对象的正确类型。
+一种是“传统”RTTI，它假定我们已在编译和运行期拥有所有类型；
+另一种是 Java1.1特有的“反射”机制，利用它可在运行期独立查找类信息。
+###对 RTTI 的需要
+####Class 对象
+事实上，我们要用Class 对象创建属于某个类的全部“常规”或“普通”对象。
+#####1. 类标记
+在Java 1.1 中，可以采用第二种方式来产生 Class对象的句柄：使用“类标记”。对上述程序来说，看起来就象下面这样：
+Gum.class;
+这样做不仅更加简单，而且更安全，因为它会在编译期间得到检查。由于它取消了对方法调用的需要，所以执行的效率也会更高。
+实战：：
+```groovy
+package rtti11;
+
+class Candy {
+    static {
+        System.out.println("Loading Candy");
+    }
+}
+
+class Gum {
+    static {
+        System.out.println("Loading Gum");
+    }
+}
+
+class Cookie {
+    static {
+        System.out.println("Loading Cookie");
+    }
+}
+
+public class SweetShop {
+    public static void main(String[] args) {
+        System.out.println("inside main");
+        new Candy();
+        System.out.println("After create Candy");
+        try {
+            Class.forName("rtti11.Gum");//问题是此处需要带有包名，才知道找的是哪个类
+            //为获得 Class的一个句柄，一个办法是使用forName()。
+            // 它的作用是取得包含了目标类文本名字的一个 String（注意拼写和大小写）。
+            // 最后返回的是一个Class 句柄。
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        System.out.println("After Class.forName(\"Gum\")");
+        new Cookie();
+        System.out.println("After creating Cookie");
+    }
+
+}
+
+```
+类型|
+----|
+boolean.class	| Boolean.TYPE
+char.class	|  Character.TYPE
+byte.class	|  Byte.TYPE
+short.class |	Short.TYPE
+int.class	|  Integer.TYPE
+long.class	|  Long.TYPE
+float.class	| Float.TYPE
+double.class	| Double.TYPE
+void.class	|  Void.TYPE
+
+####造型前的检查
+迄今为止，我们已知的 RTTI 形式包括：
+(1) 经典造型，如"(Shape)"，它用 RTTI 确保造型的正确性，并在遇到一个失败的造型后产生一个ClassCastException 违例。
+(2) 代表对象类型的Class 对象。可查询Class 对象，获取有用的运行期资料。
+###RTTI 语法
+获得指向适当 Class对象的的一个句柄：：
+1.一个办法是用一个字串以及Class.forName()方法。
+2.如果已有了它的一个对象，那么为了取得Class 句柄，可调用属于 Object根类一部分的一个方法：getClass()。它的作用是返回一个特定的 Class句柄，用来表示对象的实际类型。
+
+实战：：
+```groovy
+package rtti11;
+
+interface HasBatteries {
+}
+
+interface Waterproof {
+}
+
+interface ShootsThinks {
+}
+
+class Toy {
+    Toy() {
+    }
+
+    Toy(int i) {
+    }
+}
+
+class FancyToy extends Toy implements HasBatteries, Waterproof, ShootsThinks {
+    FancyToy() {
+        super(1);
+    }
+}
+
+public class ToyTest {
+    public static void main(String[] args) {
+        Class c = null;
+        try {
+            c = Class.forName("rtti11.FancyToy");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        printInfo(c);//打印类本身
+
+        Class[] faces = c.getInterfaces();//找到实现的所有接口
+        for (int i = 0; i < faces.length; i++) {
+            printInfo(faces[i]);
+        }
+
+        Class cy = c.getSuperclass();//父类啊
+        Object o = null;
+        try {
+            o = cy.newInstance();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        printInfo(o.getClass());
+
+    }
+
+    static void printInfo(Class cc) {
+        System.out.println("Class name: " + cc.getName() +
+                " is interface? [" + cc.isInterface() + "]");
+        //cc.isInterface()就是说cc是否是接口
+    }
+}
+
+```
+分析：：
+Class.getInterfaces 方法会返回Class 对象的一个数组，用于表示包含在 Class 对象内的接口。
+若从表面看，Class 的 newInstance()方法似乎是克隆（clone()）一个对象的另一种手段。
+cy只是一个Class 句柄，编译期间并不知道进一步的类型信息。一旦新建了一个实例后，可以得到Object句柄。
+###11.3 反射：运行期类信息
+编译器必须明确知道 RTTI 要处理的所有类。
+在运行期查询类信息的另一个原动力是通过网络创建与执行位于远程系统上的对象。
+这就叫作“远程方法调用”（RMI），它允许 Java 程序（版本 1.1以上）使用由多台机器发布或分布的对象。
+所以 RTTI 和“反射”之间唯一的区别就是对RTTI 来说，编译器会在编译期打开和检查.class文件
+####一个类方法提取器
