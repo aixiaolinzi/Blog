@@ -622,3 +622,369 @@ public class Parcel4 {
 }
 ```
 PDestination类属于 dest()的一部分，而不是 Parcel4的一部分（同时注意可为相同目录内每个类内部的一个内部类使用类标识符 PDestination，这样做不会发生命名的冲突）。
+####链接到外部类
+创建自己的内部类时，那个类的对象同时拥有指向封装对象（这些对象封装或生成了内部类）的一个链接。
+```groovy
+package polymorphism7;
+
+interface Selector {
+    boolean end();
+    Object current();
+    void next();
+}
+
+/**
+ * 给人的感觉是内部类可以操控类里面的东西。
+ *
+ */
+public class Sequence {
+    private Object[] o;
+    private int next = 0;
+
+    public Sequence(int size) {
+        o = new Object[size];
+    }
+
+    public void add(Object x) {
+        if (next < o.length) {
+            o[next] = x;
+            next++;
+        }
+    }
+
+    private class SSelector implements Selector {
+        int i = 0;
+
+        @Override
+        public boolean end() {
+            return i == o.length;
+        }
+
+        @Override
+        public Object current() {
+            return o[i];
+        }
+
+        @Override
+        public void next() {
+            if (i < o.length) i++;
+        }
+    }
+
+    public Selector getSelector() {
+        return new SSelector();
+    }
+
+    public static void main(String[] args) {
+
+        Sequence s = new Sequence(10);
+        for (int i = 0; i < 10; i++) {
+            s.add(Integer.toString(i));
+        }
+        //得到内部类，通过内部类对外部的事件进行处理。
+        Selector s1 = s.getSelector();
+        while (!s1.end()) {
+            System.out.println(s1.current());
+            s1.next();
+        }
+    }
+}
+```
+####static 内部类
+(1) 为创建一个 static内部类的对象，我们不需要一个外部类对象。
+(2) 不能从 static内部类的一个对象中访问一个外部类对象。
+但在存在一些限制：由于static 成员只能位于一个类的外部级别，所以内部类不可拥有static 数据或static内部类。
+```groovy
+package polymorphism7;
+
+public class Parcel10 {
+    private static class PContents extends Contents {
+        private int i = 11;
+
+        @Override
+        public int value() {
+            return i;
+        }
+    }
+    protected  static  class  PDestination implements Destination{
+
+        private  String label;
+
+        public PDestination(String labe) {
+            this.label = labe;
+        }
+
+        @Override
+        public String readLabel() {
+            return label;
+        }
+    }
+
+    public static Destination dest(String s) {
+        return new PDestination(s);
+    }
+    public static Contents cont() {
+        return new PContents();
+    }
+    public static void main(String[]args){
+        Contents c = cont();
+        Destination d = dest("Tanzania");
+    }
+}
+
+```
+这个与下面的问题类似  不同点是static的问题：
+```groovy
+package polymorphism7;
+
+public class Parcel2 {
+    class Contents {
+        private int i = 11;
+
+        public int value() {
+            return i;
+        }
+    }
+
+    class Destination {
+        private String label;
+
+        Destination(String whereTo) {
+            label = whereTo;
+        }
+
+        String readLabel() {
+            return label;
+        }
+    }
+
+    /**
+     * 一个外部类拥有一个特殊的方法，它会返回指向一个内部类的句柄。
+     * 就是下面的两个方法。。。
+     *
+     * @param s
+     * @return
+     */
+    public Destination to(String s) {
+        return new Destination(s);
+    }
+
+    public Contents cont() {
+        return new Contents();
+    }
+
+    public void ship(String dest) {
+        Contents c = cont();
+        Destination d = to(dest);
+    }
+
+    public static void main(String[] args) {
+        Parcel2 p = new Parcel2();
+        p.ship("Tanzania");
+        Parcel2 q = new Parcel2();
+        Parcel2.Contents c = q.cont();
+        Parcel2.Destination d = q.to("Borneo");
+    }
+}
+```
+####引用外部类对象
+```groovy
+package polymorphism7;
+
+public class Parcel11 {
+    class Contents {
+        private int i = 11;
+
+        public int value() {
+            return i;
+        }
+    }
+
+    class Destination {
+        private String label;
+
+        Destination(String whereTo) {
+            label = whereTo;
+        }
+
+        String readLabel() {
+            return label;
+        }
+    }
+
+    public static void main(String[] args) {
+        Parcel11 p = new Parcel11();
+        Parcel11.Contents c = p.new Contents();
+        Parcel11.Destination d = p.new Destination("Tanzania");
+        //上面的代码这是第一次接触问题就是在
+        //p.new Contents();这样新建了一个对象。
+    }
+}
+
+```
+> 好牛的一个例子：：
+> 最不好理解的两行代码是：：
+>Parcel11.Contents c = p.new Contents();
+>Parcel11.Destination d = p.new Destination("Tanzania");
+
+####从内部类继承
+```groovy
+package polymorphism7;
+
+class WithInner {
+    class Inner {
+    }
+}
+
+/**
+ * InheritInner只对内部类进行扩展，没有扩展外部类。
+ * 必须在构建器中采用下述语法：enclosingClassHandle.super();
+ * 它提供了必要的句柄，以便程序正确编译。
+ */
+public class InheritInner extends WithInner.Inner {
+    InheritInner(WithInner wi) {
+        wi.super();
+    }
+
+    public static void main(String[] args) {
+        WithInner wi = new WithInner();
+        InheritInner ii = new InheritInner(wi);
+    }
+}
+
+```
+> 一个新的类继承了一个上面类的内部类
+> 在构造函数中的参数是上面的新类，
+> InheritInner(WithInner wi) {
+        wi.super();
+    }
+
+>enclosingClassHandle.super();
+>它提供了必要的句柄，以便程序正确编译。
+
+####内部类可以覆盖吗？
+直接分析下面的代码就可以：
+```groovy
+package polymorphism7;
+
+class Egg {
+    /**
+     * protected 添加和不添加意思是一样的。。
+     */
+    protected class Yolk {
+        public Yolk() {
+            System.out.println("Egg.Yolk");
+        }
+    }
+
+    private Yolk y;
+
+    public Egg() {
+        System.out.println("New Egg()");
+        y = new Yolk();
+    }
+}
+
+public class BigEgg extends Egg {
+    public class Yolk {
+        public Yolk() {
+            System.out.println("BBBBBBBBBBigEgg.Yolk()");
+        }
+    }
+
+    public static void main(String[] args) {
+        new BigEgg();
+    }
+}
+
+```
+下面是可以覆盖的方法，我的感觉是多了继承：：
+```groovy
+package polymorphism7;
+
+class Egg2 {
+    protected class Yolk {
+        public Yolk() {
+            System.out.println("Egg2.Yolk()");
+        }
+
+        public void f() {
+            System.out.println("Egg2.Yolk.f()");
+        }
+    }
+
+    private Yolk y = new Yolk();
+
+    public Egg2() {
+        System.out.println("New Egg2()");
+    }
+
+    public void insertYolk(Yolk yy) {
+        y = yy;
+    }
+
+    public void g() {
+        y.f();
+    }
+}
+
+public class BigEgg2 extends Egg2 {
+
+    public class Yolk extends Egg2.Yolk {
+        public Yolk() {
+            System.out.println("BBBBBBBBigEgg2.Yolk()");
+        }
+
+        public void f() {
+            System.out.println("BBBBBBigEgg2.Yolk.f()");
+        }
+    }
+
+    public BigEgg2() {
+        insertYolk(new Yolk());
+    }
+
+    /**
+     * 构造的顺序：：
+     * Egg2 e2 = new BigEgg2();无参数的构造函数里面的代码隐藏。
+     * 先是BigEgg2,
+     * 1.找他的父类，父类里面先是 private Yolk y = new Yolk();
+     * 然后是自己的构造函数。
+     * 2.自己的函数，但是此函数是没有的没有涉及到其他的构造的。
+     * Egg2 e2 = new BigEgg2();无参数的构造函数里面的代码放开。
+     * 有了new Yolk()的构造，分析这个函数，
+     * 先运行父类的构造函数然后是自己的构造函数。
+     * <p>
+     * Egg2 e2 = new BigEgg2();
+     * e2.g();
+     * 分析e2.g();
+     * 此处就是分析使用哪里的f()方法。
+     * 根据结果使用的是后来继承f()的方法。
+     *
+     */
+    public static void main(String[] args) {
+        Egg2 e2 = new BigEgg2();
+        e2.g();
+    }
+}
+
+```
+####内部类标识符
+由于每个类都会生成一个.class 文件
+这些文件或类的名字遵守一种严格的形式：先是封装类的名字，再跟随一个$，再跟随内部类的名字。
+例如，由InheritInner.java创建的.class 文件包括：
+InheritInner.class
+WithInner$Inner.class
+WithInner.class
+####为什么要用内部类：控制框架
+
+###构建器和多形性
+####构建器的调用顺序
+这意味着对于一个复杂的对象，构建器的调用遵照下面的顺序：
+(1) 调用基础类构建器。这个步骤会不断重复下去，首先得到构建的是分级结构的根部，然后是下一个衍生
+类，等等。直到抵达最深一层的衍生类。
+(2) 按声明顺序调用成员初始化模块。
+(3) 调用衍生构建器的主体。
+####继承和 finalize()
+
+##第 8 章 对象的容纳
