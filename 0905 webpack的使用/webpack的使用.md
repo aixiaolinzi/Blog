@@ -3,6 +3,11 @@ Webpack的使用
 ##前言
 
 首次接触Webpack。
+[汉语教程](http://www.css88.com/doc/webpack2/)
+[汉语教程最新](http://www.css88.com/doc/webpack/)
+
+
+
 
 ##任务
 
