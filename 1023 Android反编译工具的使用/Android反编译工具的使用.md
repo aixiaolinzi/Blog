@@ -69,15 +69,52 @@ Android 打包流程的第一步，是处理资源文件。
 ####1.利用ApkTool，获取AndroidManifest和res等资源文件
 工具地址： https://ibotpeaches.github.io/Apktool/
 进入官网有详细的使用过程：https://ibotpeaches.github.io/Apktool/install/
-放入：运行`java -jar apktool.jar d no.apk`
+具体如下图：
+![](Android5.png)
+我来写一下我自己的详细步骤：
+1.在D盘新建一个文件夹命名为apktool，进入此文件夹。
+2.新建一个空的apktool.bat文件，点击上图第一步的` wrapper script `跳转到新的网页，复制网页的所有内容，打开apktool.bat文件，把刚才复制的内容粘贴到里面，保存。
+3.点击上图第二步的`find newest here`下载最新的jar包，下载到本地后改名为apktool.jar，移动到`D://ApkTool`下面。
+4.把要反编译的文件比如no.apk放入到`D://ApkTool`目录下，打开命令行，切换到`D://ApkTool`目录下，运行`java -jar apktool.jar d no.apk`
+5.执行完上面的文件就可以得到一个no文件夹。打开文件夹就能看到AndroidManifest和res等资源文件。
 
-####2.dex2jar反编译dex文件，得到java源代码
+以上就是ApkTool的使用,最后的结果如下：
+![](Android9.png)
+####2.dex2jar反编译dex文件，jd-gui 可视化反编译配合使用
+######2.1  dex2jar反编译dex文件，得到java源代码
+dex2jar 可将 .dex 转换成 .jar
+参考: https://github.com/pxb1988/dex2jar
+下载：https://bitbucket.org/pxb1988/dex2jar/downloads/
+详细的使用步骤：
+1.下载dex2jar-2.0.zip的压缩包(写这篇文章时名字是dex2jar-2.0)，新建文件`D://apkdex`，然后把dex2jar-2.0.zip放入到apkdex文件中，解压得到dex2jar-2.0文件夹.
+2.把要反编译的文件比如no.apk改名为no.zip,把里面的classes.dex取出来复制到dex2jar-2.0文件夹下面。
+3.打开命令行，切换到`D://apkdex//dex2jar-2.0`目录下，运行`d2j-dex2jar  classes.dex  -o  classes.jar`.在文件夹下面就会形成classes.jar文件。
+4.如果有多个.dex文件，就多次执行`d2j-dex2jar  xxx.dex  -o  xxx.jar`得到相应的文件。
 
-
-####3.jd-gui 可视化反编译查看 .jar 文件
+那么得到的jar文件怎样看呢？？就需要下面的步骤了。
+######2.2  jd-gui 可视化反编译查看 .jar 文件
 官网：http://jd.benow.ca/
 下载：http://jd.benow.ca/#jd-gui-download
+具体的使用：
+ 下载完成后直接打开，把生成的classes-dex2jar.jar 文件直接拖到里面就可以观看了.如下图
+ ![](Android6.png)
+####3.jadx反编译Akp，得到.java源代码
+工具地址 ：
+github: https://github.com/skylot/jadx/releases
+sourceforge: http://sourceforge.net/projects/jadx/files/
+
+两个优点:
+>1.可以直接反编译出.java文件
+2.查看源码时直接显示资源名称，而不是像jd-gui里显示的资源ID
+
+安装： 下载完成后进行解压到自己指定的目录。
+使用： 进入bin目录下执行jadx-gui.bat，jadx也有GUI，进入后选中然将要反编译的apk即可，运行效果如下。
+![](Android7.png)
+
 
 ####4.android-classyshark全自动的反编译工具
 下载：https://github.com/google/android-classyshark/releases
-使用：直接打开，拖拽apk进入就可以。
+使用：直接打开，拖拽apk进入就可以。运行效果如下：
+![](Android8.png)
+
+上面应该够用的了吧！！
