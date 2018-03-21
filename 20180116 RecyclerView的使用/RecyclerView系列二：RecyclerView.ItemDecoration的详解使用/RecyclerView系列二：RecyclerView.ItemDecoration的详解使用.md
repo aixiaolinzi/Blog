@@ -1,46 +1,43 @@
 RecyclerView系列二：RecyclerView.ItemDecoration的详解使用
 ##前言
 在很早很早以前（long long ago），ListView鼎盛的时代有一个属性叫做divider。但是在RecycleView上面就是找不到他，那怎么办呢？？？直到后来有一天发现他变身了，变成了ItemDecoration。实在是扯不下去了，直接开始吧！
+这篇博客酝酿了好长时间，希望不会让各位看官失望。
 ##任务
-自己动手实战一把，注意下面的某些句子是摘抄的。。。
-##介绍
-RecyclerView是support-v7包中的新组件，是一个强大的滑动组件，与经典的ListView相比，同样拥有item回收复用的功能，这一点从它的名字Recyclerview即回收view也可以看出。
-优点：
-- RecyclerView封装了viewholder的回收复用，也就是说RecyclerView标准化了ViewHolder，编写Adapter面向的是ViewHolder而不再是View了，复用的逻辑被封装了，写起来更加简单。
-- 提供了一种插拔式的体验，高度的解耦，异常的灵活，针对一个Item的显示RecyclerView专门抽取出了相应的类，来控制Item的显示，使其的扩展性非常强。
-- 可以控制Item增删的动画，可以通过ItemAnimator这个类进行控制，当然针对增删的动画，RecyclerView有其自己默认的实现。
-- Adapter：使用RecyclerView之前，你需要一个继承自RecyclerView.Adapter的适配器，作用是将数据与每一个item的界面进行绑定。
-- LayoutManager：用来确定每一个item如何进行排列摆放，何时展示和隐藏。回收或重用一个View的时候，LayoutManager会向适配器请求新的数据来替换旧的数据，这种机制避免了创建过多的View和频繁的调用findViewById方法（与ListView原理类似）。
+了解ItemDecoration的原理，自己可以添加分割线，每个 ItemView 上叠加一个角标，自定义 RecyclerView 中的头部或者是粘性头部。
 
-##简单的RecyclerView使用方法
-####1.添加依赖
-在AS的build.gradle中添加依赖，然后同步一下就可以引入依赖包：
+##分析和实战
+####1.具体的使用
+RecyclerView的简单使用可以参考前一篇[RecyclerView系列一：简单使用](https://www.jianshu.com/p/565daef18007)
+我们在页面中放两个RecyclerView，上面一个下面一个，用来对比。如下图所示：
+![](sc.png)
+现在开始处理：写TextItemDecoration类让他继承RecyclerView.ItemDecoration，主要的代码如下所示：
 ```groovy
-dependencies {
-	...
-    compile 'com.android.support:recyclerview-v7:26.+'
-}
+    class TextItemDecoration extends RecyclerView.ItemDecoration {
+
+        //设置ItemView的内嵌偏移长度（inset）
+        @Override
+        public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
+            super.getItemOffsets(outRect, view, parent, state);
+        }
+
+        // 在子视图上设置绘制范围，并绘制内容
+        // 绘制图层在ItemView以下，所以如果绘制区域与ItemView区域相重叠，会被遮挡
+        @Override
+        public void onDraw(Canvas c, RecyclerView parent, RecyclerView.State state) {
+            super.onDraw(c, parent, state);
+        }
+
+        //同样是绘制内容，但与onDraw（）的区别是：绘制在图层的最上层
+        @Override
+        public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
+            super.onDrawOver(c, parent, state);
+        }
+    }
 ```
-####2.布局文件
+####2.分析方法getItemOffsets
 添加完依赖之后，就开始写代码了，与ListView用法类似，也是先在xml布局文件中创建一个RecyclerView的布局：
-```groovy
-<?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".baseUse.RecyclerActivity">
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/recycler_view"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-    </android.support.v7.widget.RecyclerView>
-
-</RelativeLayout>
-```
-####2.创建完布局之后在MainActivity中获取这个RecyclerView，并声明LayoutManager与Adapter，代码如下：
+####3.创建完布局之后在MainActivity中获取这个RecyclerView，并声明LayoutManager与Adapter，代码如下：
 ```groovy
         mRecyclerView = findViewById(R.id.recycler_view);
         //创建默认的线性LayoutManager
